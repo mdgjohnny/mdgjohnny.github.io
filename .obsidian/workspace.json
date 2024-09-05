@@ -11,12 +11,8 @@
             "id": "420f4b3052b745c4",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "_posts/2024-05-09-testing.md",
-                "mode": "source",
-                "source": false
-              }
+              "type": "empty",
+              "state": {}
             }
           }
         ]
@@ -85,7 +81,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "_posts/2024-05-09-testing.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -102,7 +97,6 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "_posts/2024-05-09-testing.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -125,7 +119,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "_posts/2024-05-09-testing.md"
+                "file": "_posts/2024-09-05-testing.md"
               }
             }
           }
@@ -147,8 +141,8 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "420f4b3052b745c4",
+  "active": "4a49dc6439dc0887",
   "lastOpenFiles": [
-    "_posts/2024-05-09-testing.md"
+    "_posts/2024-09-05-testing.md"
   ]
 }
