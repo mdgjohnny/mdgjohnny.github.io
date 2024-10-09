@@ -1,0 +1,25 @@
+
+
+pre, code {
+  background-color: #000000 !important;
+  color: var(--bg);
+  font-family: "Menlo", "Inconsolata", "Consolas", "Roboto Mono", "Ubuntu Mono", "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9375em;
+}
+ 
+/* Firefox */
+html {
+  scrollbar-width: thin; /* Options: auto, thin, none */
+  scrollbar-color: #666666 #212121; /* Handle color and track color */
+}
+
+.highlighter-rouge .highlight {
+  background: #f8cfcf;
+}
+
+highlight {
+  border-radius: 3px;
+  background: #655a5a;
+}
+
+ 
