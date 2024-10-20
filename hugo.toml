@@ -1,6 +1,26 @@
 baseURL = 'https://mdgjohnny.github.io'
 languageCode = 'en-us'
-title = 'Papancalypse'
+title = 'papancalypse'
 
 theme = "hugo-theme-console"
+
+[params]
+  # Cutting off the page title to two chars for mobile (console-demo -> co)
+  titleCutting = true
+
+  # Set the animation style -- https://animate.style/
+  # To disable animations, please remove or comment animationStyle parameter
+  animateStyle = "animated zoomIn fast" 
+
+  [[params.navlinks]]
+  name = "sobre-mim/"
+  url = "sobre-mim/"
+
+  [[params.navlinks]]
+  name = "posts/"
+  url = "posts/"
+  
+  [[params.navlinks]]
+  name = "recentemente/"
+  url = "recentemente/"
 
