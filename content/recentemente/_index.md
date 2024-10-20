@@ -1,4 +1,0 @@
-+++
-title = "Recentemente..."
-type = "gallery"
-+++

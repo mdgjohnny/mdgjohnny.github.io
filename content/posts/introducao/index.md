@@ -1,9 +1,9 @@
 +++
-title = "O que é, o que é"
+title = "o que é, o que é"
 date = "2024-10-20"
 +++
 
-Clara e salgada.
+clara e salgada
 <!--more-->
 
-Cabe em uma mão e pesa uma tonelada.
+cabe em uma mão e pesa uma tonelada.

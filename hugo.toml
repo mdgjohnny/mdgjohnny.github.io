@@ -1,5 +1,5 @@
 baseURL = 'https://mdgjohnny.github.io'
-languageCode = 'en-us'
+languageCode = 'pt-BR'
 title = 'papancalypse'
 
 theme = "hugo-theme-console"
@@ -21,6 +21,6 @@ theme = "hugo-theme-console"
   url = "posts/"
   
   [[params.navlinks]]
-  name = "recentemente/"
-  url = "recentemente/"
+  name = "gosto-e-recomendo/"
+  url = "gosto-e-recomendo/"
 
