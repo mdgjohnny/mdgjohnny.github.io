@@ -1,0 +1,4 @@
++++
+title = "Recentemente..."
+type = "gallery"
++++
