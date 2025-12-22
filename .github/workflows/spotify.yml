@@ -62,32 +62,34 @@ jobs:
           ARTIST="${{ steps.recent.outputs.artist }}"
 
           LYRIC="$(
-            python -m lyricsgenius song "${TRACK}" "${ARTIST}" 2>/dev/null \
-            | awk -v seed="${RANDOM}" '
-              BEGIN { srand(seed) }
-              /^[[:space:]]*$/ { next }
-              /^[[:space:]]*\[/ { next }
-              {
-                ++n
-                if (rand() < 1/n) {
-                  pick = $0
-                }
-              }
-              END {
-                if (n > 0) {
-                  print pick
-                }
-              }
-            ' \
-            | sed -E '
-                s/^[“”"'\''‘’]+//;
-                s/[“”"'\''‘’]+$//;
-                s/[‘’]/'\''/g;
-                s/[“”]/"/g;
-                s/—/--/g;
-                s/–/-/g;
-                s/…/.../g
-              '
+            {
+              python -m lyricsgenius song "${TRACK}" "${ARTIST}" 2>/dev/null \
+              | awk -v seed="${RANDOM}" '
+                  BEGIN { srand(seed) }
+                  /^[[:space:]]*$/ { next }
+                  /^[[:space:]]*\[/ { next }
+                  {
+                    ++n
+                    if (rand() < 1/n) {
+                      pick = $0
+                    }
+                  }
+                  END {
+                    if (n > 0) {
+                      print pick
+                    }
+                  }
+                ' \
+              | sed -E '
+                  s/^[“”"'\''‘’]+//;
+                  s/[“”"'\''‘’]+$//;
+                  s/[‘’]/'\''/g;
+                  s/[“”]/"/g;
+                  s/—/--/g;
+                  s/–/-/g;
+                  s/…/.../g
+                '
+            } || true
           )"
 
           printf 'lyric=%s\n' "${LYRIC}" >> "${GITHUB_OUTPUT}"
