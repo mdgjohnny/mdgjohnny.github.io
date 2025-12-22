@@ -48,6 +48,7 @@ jobs:
           ARTIST="${{ steps.recent.outputs.artist }}"
 
           LYRIC=$(curl -s -G "https://lrclib.net/api/search" \
+            -H "User-Agent: mdgjohnny-spotify-widget/1.0" \
             --data-urlencode "track_name=$TRACK" \
             --data-urlencode "artist_name=$ARTIST" | \
             python3 << 'PYEOF'
@@ -55,13 +56,16 @@ jobs:
           import json
           import random
 
-          data = json.load(sys.stdin)
-          if data and len(data) > 0 and data[0].get('plainLyrics'):
-              lyrics = data[0]['plainLyrics']
-              lines = [l.strip() for l in lyrics.split('\n')
-                       if l.strip() and len(l.strip()) >= 20]
-              if lines:
-                  print(random.choice(lines))
+          try:
+              data = json.load(sys.stdin)
+              if data and len(data) > 0 and data[0].get('plainLyrics'):
+                  lyrics = data[0]['plainLyrics']
+                  lines = [l.strip() for l in lyrics.split('\n')
+                           if l.strip() and len(l.strip()) >= 20]
+                  if lines:
+                      print(random.choice(lines))
+          except:
+              pass
           PYEOF
           )
 
