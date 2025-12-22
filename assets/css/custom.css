@@ -1,0 +1,86 @@
+/* Terminal-colored links */
+a {
+  color: #33ff33;
+  text-decoration: none;
+  text-shadow: 0 0 5px rgba(51, 255, 51, 0.5);
+  transition: all 0.2s ease;
+}
+
+a:hover {
+  color: #00ffff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+}
+
+a:visited {
+  color: #22aa22;
+}
+
+/* Phosphor glow on ASCII art */
+pre, code {
+  text-shadow: 0 0 8px rgba(51, 255, 51, 0.4);
+}
+
+/* Scanlines overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1),
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  z-index: 9999;
+}
+
+/* Blinking cursor */
+.cursor {
+  display: inline-block;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ASCII divider styling */
+.divider {
+  color: #33ff33;
+  text-align: center;
+  margin: 2em 0;
+  text-shadow: 0 0 5px rgba(51, 255, 51, 0.5);
+}
+
+/* Last modified footer */
+.last-modified {
+  color: #666;
+  font-size: 0.8em;
+  margin-top: 3em;
+  padding-top: 1em;
+  border-top: 1px solid #333;
+}
+
+/* Fortune box */
+.fortune {
+  border: 1px solid #33ff33;
+  padding: 1em;
+  margin: 2em 0;
+  font-style: italic;
+  color: #aaa;
+  text-shadow: 0 0 3px rgba(51, 255, 51, 0.3);
+}
+
+.fortune::before {
+  content: "$ fortune";
+  display: block;
+  color: #33ff33;
+  font-style: normal;
+  margin-bottom: 0.5em;
+}
