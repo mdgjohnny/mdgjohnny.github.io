@@ -1,6 +1,8 @@
-name: Update Now Playing (Debug)
+name: Update Now Playing
 
 on:
+  schedule:
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -9,146 +11,93 @@ permissions:
 jobs:
   update-now-playing:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          set -euo pipefail
-          pip install lyricsgenius
-          sudo apt-get update
-          sudo apt-get install -y jq
-
-      - name: Debug Genius environment
-        run: |
-          set -euo pipefail
-
-          echo "[DEBUG] Genius env vars present:"
-          env | grep '^GENIUS_' || true
-
-          if [ -z "${GENIUS_ACCESS_TOKEN:-}" ]; then
-            echo "[ERROR] GENIUS_ACCESS_TOKEN is not set"
-            exit 1
-          fi
-
-          echo "[DEBUG] GENIUS_ACCESS_TOKEN length: ${#GENIUS_ACCESS_TOKEN}"
-
-        env:
-          GENIUS_ACCESS_TOKEN: ${{ secrets.GENIUS_ACCESS_TOKEN }}
-
       - name: Get Spotify access token
         id: token
         run: |
-          set -euo pipefail
-
-          RESPONSE="$(curl -s -X POST "https://accounts.spotify.com/api/token" \
+          RESPONSE=$(curl -s -X POST "https://accounts.spotify.com/api/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "grant_type=refresh_token" \
             -d "refresh_token=${{ secrets.SPOTIFY_REFRESH_TOKEN }}" \
             -d "client_id=${{ secrets.SPOTIFY_CLIENT_ID }}" \
-            -d "client_secret=${{ secrets.SPOTIFY_CLIENT_SECRET }}")"
+            -d "client_secret=${{ secrets.SPOTIFY_CLIENT_SECRET }}")
 
-          echo "[DEBUG] Spotify token response keys:"
-          echo "${RESPONSE}" | jq 'keys'
-
-          ACCESS_TOKEN="$(echo "${RESPONSE}" | jq -r '.access_token')"
-          printf 'access_token=%s\n' "${ACCESS_TOKEN}" >> "${GITHUB_OUTPUT}"
+          ACCESS_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
+          echo "::add-mask::$ACCESS_TOKEN"
+          echo "access_token=$ACCESS_TOKEN" >> $GITHUB_OUTPUT
 
       - name: Fetch recently played
         id: recent
         run: |
-          set -euo pipefail
+          RESPONSE=$(curl -s -X GET "https://api.spotify.com/v1/me/player/recently-played?limit=1" \
+            -H "Authorization: Bearer ${{ steps.token.outputs.access_token }}")
 
-          RESPONSE="$(curl -s -X GET \
-            "https://api.spotify.com/v1/me/player/recently-played?limit=1" \
-            -H "Authorization: Bearer ${{ steps.token.outputs.access_token }}")"
+          TRACK=$(echo "$RESPONSE" | jq -r '.items[0].track.name')
+          ARTIST=$(echo "$RESPONSE" | jq -r '.items[0].track.artists[0].name')
 
-          echo "[DEBUG] Spotify response:"
-          echo "${RESPONSE}" | jq '.items[0].track | {name, artists}'
+          echo "track=$TRACK" >> $GITHUB_OUTPUT
+          echo "artist=$ARTIST" >> $GITHUB_OUTPUT
 
-          TRACK="$(echo "${RESPONSE}" | jq -r '.items[0].track.name')"
-          ARTIST="$(echo "${RESPONSE}" | jq -r '.items[0].track.artists[0].name')"
+      - name: Install lyricsgenius
+        run: pip install lyricsgenius
 
-          printf 'track=%s\n' "${TRACK}" >> "${GITHUB_OUTPUT}"
-          printf 'artist=%s\n' "${ARTIST}" >> "${GITHUB_OUTPUT}"
-
-      - name: Fetch lyrics from Genius (verbose)
+      - name: Fetch lyrics from Genius
         id: lyrics
         env:
           GENIUS_ACCESS_TOKEN: ${{ secrets.GENIUS_ACCESS_TOKEN }}
         run: |
-          set -euo pipefail
-
           TRACK="${{ steps.recent.outputs.track }}"
           ARTIST="${{ steps.recent.outputs.artist }}"
 
-          echo "[DEBUG] Querying Genius:"
-          echo "        Track : ${TRACK}"
-          echo "        Artist: ${ARTIST}"
+          # Use lyricsgenius CLI to fetch lyrics
+          python -m lyricsgenius song "$TRACK" "$ARTIST" --save --format json -q || true
 
-          RAW_LYRICS="$(
-            python -m lyricsgenius song "${TRACK}" "${ARTIST}" 2>&1 || true
-          )"
+          LYRIC=$(python3 << 'PYEOF'
+          import json
+          import glob
+          import random
+          import os
 
-          echo "[DEBUG] Raw lyricsgenius output:"
-          echo "------------------------------"
-          echo "${RAW_LYRICS}"
-          echo "------------------------------"
+          # Find the saved JSON file
+          files = glob.glob("*.json")
+          if files:
+              with open(files[0]) as f:
+                  data = json.load(f)
+                  lyrics = data.get('lyrics', '')
+                  if lyrics:
+                      lines = [l.strip() for l in lyrics.split('\n')
+                               if l.strip() and len(l.strip()) >= 20
+                               and not l.startswith('[')
+                               and 'Embed' not in l
+                               and 'Lyrics' not in l]
+                      if lines:
+                          print(random.choice(lines))
+          PYEOF
+          )
 
-          LYRIC="$(
-            printf '%s\n' "${RAW_LYRICS}" \
-            | awk -v seed="${RANDOM}" '
-                BEGIN { srand(seed) }
-                /^[[:space:]]*$/ { next }
-                /^[[:space:]]*\[/ { next }
-                {
-                  ++n
-                  if (rand() < 1/n) {
-                    pick = $0
-                  }
-                }
-                END {
-                  if (n > 0) print pick
-                }
-              ' \
-            | sed -E '
-                s/^[“”"'\''‘’]+//;
-                s/[“”"'\''‘’]+$//;
-                s/[‘’]/'\''/g;
-                s/[“”]/"/g;
-                s/—/--/g;
-                s/–/-/g;
-                s/…/.../g
-              '
-          )"
-
-          echo "[DEBUG] Selected lyric:"
-          echo "${LYRIC:-<empty>}"
-
-          printf 'lyric=%s\n' "${LYRIC}" >> "${GITHUB_OUTPUT}"
+          echo "lyric=$LYRIC" >> $GITHUB_OUTPUT
 
       - name: Update now-playing.txt
         run: |
-          set -euo pipefail
-
           TRACK="${{ steps.recent.outputs.track }}"
           ARTIST="${{ steps.recent.outputs.artist }}"
           LYRIC="${{ steps.lyrics.outputs.lyric }}"
 
-          if [ -n "${LYRIC}" ]; then
-            printf '"%s"\n    — %s by %s\n' \
-              "${LYRIC}" "${TRACK}" "${ARTIST}" \
-              > _includes/now-playing.txt
+          if [ -n "$LYRIC" ]; then
+            echo "\"$LYRIC\"" > _includes/now-playing.txt
+            echo "    — $TRACK by $ARTIST" >> _includes/now-playing.txt
           else
-            echo "[WARN] No lyric; writing fallback"
-            printf '🎵 %s\n    — %s\n' \
-              "${TRACK}" "${ARTIST}" \
-              > _includes/now-playing.txt
+            echo "🎵 $TRACK" > _includes/now-playing.txt
+            echo "    — $ARTIST" >> _includes/now-playing.txt
           fi
 
-      - name: Show final file
+      - name: Commit and push
         run: |
-          echo "[DEBUG] _includes/now-playing.txt"
-          cat _includes/now-playing.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add _includes/now-playing.txt
+          git diff --staged --quiet || git commit -m "Update now playing"
+          git push
