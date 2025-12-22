@@ -2,7 +2,7 @@ name: Update Now Playing
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -11,45 +11,112 @@ permissions:
 jobs:
   update-now-playing:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get access token
+      - name: Get Spotify access token
         id: token
         run: |
-          RESPONSE=$(curl -s -X POST "https://accounts.spotify.com/api/token" \
+          set -euo pipefail
+
+          RESPONSE="$(curl -s -X POST "https://accounts.spotify.com/api/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "grant_type=refresh_token" \
             -d "refresh_token=${{ secrets.SPOTIFY_REFRESH_TOKEN }}" \
             -d "client_id=${{ secrets.SPOTIFY_CLIENT_ID }}" \
-            -d "client_secret=${{ secrets.SPOTIFY_CLIENT_SECRET }}")
+            -d "client_secret=${{ secrets.SPOTIFY_CLIENT_SECRET }}")"
 
-          ACCESS_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
-          echo "::add-mask::$ACCESS_TOKEN"
-          echo "access_token=$ACCESS_TOKEN" >> $GITHUB_OUTPUT
+          ACCESS_TOKEN="$(echo "${RESPONSE}" | jq -r '.access_token')"
+          echo "::add-mask::${ACCESS_TOKEN}"
+          printf 'access_token=%s\n' "${ACCESS_TOKEN}" >> "${GITHUB_OUTPUT}"
 
       - name: Fetch recently played
         id: recent
         run: |
-          RESPONSE=$(curl -s -X GET "https://api.spotify.com/v1/me/player/recently-played?limit=1" \
-            -H "Authorization: Bearer ${{ steps.token.outputs.access_token }}")
+          set -euo pipefail
 
-          TRACK=$(echo "$RESPONSE" | jq -r '.items[0].track.name')
-          ARTIST=$(echo "$RESPONSE" | jq -r '.items[0].track.artists[0].name')
+          RESPONSE="$(curl -s -X GET \
+            "https://api.spotify.com/v1/me/player/recently-played?limit=1" \
+            -H "Authorization: Bearer ${{ steps.token.outputs.access_token }}")"
 
-          echo "track=$TRACK" >> $GITHUB_OUTPUT
-          echo "artist=$ARTIST" >> $GITHUB_OUTPUT
+          TRACK="$(echo "${RESPONSE}" | jq -r '.items[0].track.name')"
+          ARTIST="$(echo "${RESPONSE}" | jq -r '.items[0].track.artists[0].name')"
+
+          printf 'track=%s\n' "${TRACK}" >> "${GITHUB_OUTPUT}"
+          printf 'artist=%s\n' "${ARTIST}" >> "${GITHUB_OUTPUT}"
+
+      - name: Install lyricsgenius
+        run: |
+          pip install lyricsgenius
+
+      - name: Fetch lyric line from Genius
+        id: lyrics
+        env:
+          GENIUS_ACCESS_TOKEN: ${{ secrets.GENIUS_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          TRACK="${{ steps.recent.outputs.track }}"
+          ARTIST="${{ steps.recent.outputs.artist }}"
+
+          LYRIC="$(
+            python -m lyricsgenius song "${TRACK}" "${ARTIST}" 2>/dev/null \
+            | awk -v seed="${RANDOM}" '
+              BEGIN { srand(seed) }
+              /^[[:space:]]*$/ { next }
+              /^[[:space:]]*\[/ { next }
+              {
+                ++n
+                if (rand() < 1/n) {
+                  pick = $0
+                }
+              }
+              END {
+                if (n > 0) {
+                  print pick
+                }
+              }
+            ' \
+            | sed -E '
+                s/^[“”"'\''‘’]+//;
+                s/[“”"'\''‘’]+$//;
+                s/[‘’]/'\''/g;
+                s/[“”]/"/g;
+                s/—/--/g;
+                s/–/-/g;
+                s/…/.../g
+              '
+          )"
+
+          printf 'lyric=%s\n' "${LYRIC}" >> "${GITHUB_OUTPUT}"
 
       - name: Update now-playing.txt
         run: |
-          echo "\"${{ steps.recent.outputs.track }}\"" > _includes/now-playing.txt
-          echo "    — ${{ steps.recent.outputs.artist }}, via Spotify" >> _includes/now-playing.txt
+          set -euo pipefail
+
+          TRACK="${{ steps.recent.outputs.track }}"
+          ARTIST="${{ steps.recent.outputs.artist }}"
+          LYRIC="${{ steps.lyrics.outputs.lyric }}"
+
+          if [ -n "${LYRIC}" ]; then
+            printf '"%s"\n    — %s by %s\n' \
+              "${LYRIC}" "${TRACK}" "${ARTIST}" \
+              > _includes/now-playing.txt
+          else
+            printf '🎵 %s\n    — %s\n' \
+              "${TRACK}" "${ARTIST}" \
+              > _includes/now-playing.txt
+          fi
 
       - name: Commit and push
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add _includes/now-playing.txt
           git diff --staged --quiet || git commit -m "Update now playing"
           git push
