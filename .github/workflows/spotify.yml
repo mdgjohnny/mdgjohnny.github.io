@@ -73,8 +73,13 @@ jobs:
             exit 0
           fi
 
-          # Pick a random line
-          RANDOM_LINE=$(echo "$LYRICS" | shuf -n 1 | xargs)
+          # Pick a random line (at least 20 chars for a proper sentence)
+          RANDOM_LINE=$(echo "$LYRICS" | awk 'length >= 20' | shuf -n 1 | xargs)
+
+          # Fallback to any line if no long ones
+          if [ -z "$RANDOM_LINE" ]; then
+            RANDOM_LINE=$(echo "$LYRICS" | shuf -n 1 | xargs)
+          fi
 
           echo "lyric=$RANDOM_LINE" >> $GITHUB_OUTPUT
 
@@ -86,10 +91,10 @@ jobs:
 
           if [ -n "$LYRIC" ]; then
             echo "\"$LYRIC\"" > _includes/now-playing.txt
-            echo "    — $ARTIST, \"$TRACK\" (via Spotify)" >> _includes/now-playing.txt
+            echo "    — $ARTIST" >> _includes/now-playing.txt
           else
             echo "\"$TRACK\"" > _includes/now-playing.txt
-            echo "    — $ARTIST, via Spotify" >> _includes/now-playing.txt
+            echo "    — $ARTIST" >> _includes/now-playing.txt
           fi
 
       - name: Commit and push

@@ -91,3 +91,21 @@ body::before {
   font-style: normal;
   margin-bottom: 0.5em;
 }
+
+/* Now playing box */
+.now-playing {
+  border: 1px solid #33ff33;
+  padding: 1em;
+  margin: 2em 0;
+  font-style: italic;
+  color: #aaa;
+  text-shadow: 0 0 3px rgba(51, 255, 51, 0.3);
+}
+
+.now-playing::before {
+  content: "$ spotify --recent";
+  display: block;
+  color: #33ff33;
+  font-style: normal;
+  margin-bottom: 0.5em;
+}
