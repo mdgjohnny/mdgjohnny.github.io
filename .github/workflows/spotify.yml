@@ -1,8 +1,6 @@
-name: Update Now Playing
+name: Update Now Playing (Debug)
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -16,6 +14,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          pip install lyricsgenius
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Debug Genius environment
+        run: |
+          set -euo pipefail
+
+          echo "[DEBUG] Genius env vars present:"
+          env | grep '^GENIUS_' || true
+
+          if [ -z "${GENIUS_ACCESS_TOKEN:-}" ]; then
+            echo "[ERROR] GENIUS_ACCESS_TOKEN is not set"
+            exit 1
+          fi
+
+          echo "[DEBUG] GENIUS_ACCESS_TOKEN length: ${#GENIUS_ACCESS_TOKEN}"
+
+        env:
+          GENIUS_ACCESS_TOKEN: ${{ secrets.GENIUS_ACCESS_TOKEN }}
+
       - name: Get Spotify access token
         id: token
         run: |
@@ -28,8 +50,10 @@ jobs:
             -d "client_id=${{ secrets.SPOTIFY_CLIENT_ID }}" \
             -d "client_secret=${{ secrets.SPOTIFY_CLIENT_SECRET }}")"
 
+          echo "[DEBUG] Spotify token response keys:"
+          echo "${RESPONSE}" | jq 'keys'
+
           ACCESS_TOKEN="$(echo "${RESPONSE}" | jq -r '.access_token')"
-          echo "::add-mask::${ACCESS_TOKEN}"
           printf 'access_token=%s\n' "${ACCESS_TOKEN}" >> "${GITHUB_OUTPUT}"
 
       - name: Fetch recently played
@@ -41,17 +65,16 @@ jobs:
             "https://api.spotify.com/v1/me/player/recently-played?limit=1" \
             -H "Authorization: Bearer ${{ steps.token.outputs.access_token }}")"
 
+          echo "[DEBUG] Spotify response:"
+          echo "${RESPONSE}" | jq '.items[0].track | {name, artists}'
+
           TRACK="$(echo "${RESPONSE}" | jq -r '.items[0].track.name')"
           ARTIST="$(echo "${RESPONSE}" | jq -r '.items[0].track.artists[0].name')"
 
           printf 'track=%s\n' "${TRACK}" >> "${GITHUB_OUTPUT}"
           printf 'artist=%s\n' "${ARTIST}" >> "${GITHUB_OUTPUT}"
 
-      - name: Install lyricsgenius
-        run: |
-          pip install lyricsgenius
-
-      - name: Fetch lyric line from Genius
+      - name: Fetch lyrics from Genius (verbose)
         id: lyrics
         env:
           GENIUS_ACCESS_TOKEN: ${{ secrets.GENIUS_ACCESS_TOKEN }}
@@ -61,36 +84,48 @@ jobs:
           TRACK="${{ steps.recent.outputs.track }}"
           ARTIST="${{ steps.recent.outputs.artist }}"
 
-          LYRIC="$(
-            {
-              python -m lyricsgenius song "${TRACK}" "${ARTIST}" 2>/dev/null \
-              | awk -v seed="${RANDOM}" '
-                  BEGIN { srand(seed) }
-                  /^[[:space:]]*$/ { next }
-                  /^[[:space:]]*\[/ { next }
-                  {
-                    ++n
-                    if (rand() < 1/n) {
-                      pick = $0
-                    }
-                  }
-                  END {
-                    if (n > 0) {
-                      print pick
-                    }
-                  }
-                ' \
-              | sed -E '
-                  s/^[“”"'\''‘’]+//;
-                  s/[“”"'\''‘’]+$//;
-                  s/[‘’]/'\''/g;
-                  s/[“”]/"/g;
-                  s/—/--/g;
-                  s/–/-/g;
-                  s/…/.../g
-                '
-            } || true
+          echo "[DEBUG] Querying Genius:"
+          echo "        Track : ${TRACK}"
+          echo "        Artist: ${ARTIST}"
+
+          RAW_LYRICS="$(
+            python -m lyricsgenius song "${TRACK}" "${ARTIST}" 2>&1 || true
           )"
+
+          echo "[DEBUG] Raw lyricsgenius output:"
+          echo "------------------------------"
+          echo "${RAW_LYRICS}"
+          echo "------------------------------"
+
+          LYRIC="$(
+            printf '%s\n' "${RAW_LYRICS}" \
+            | awk -v seed="${RANDOM}" '
+                BEGIN { srand(seed) }
+                /^[[:space:]]*$/ { next }
+                /^[[:space:]]*\[/ { next }
+                {
+                  ++n
+                  if (rand() < 1/n) {
+                    pick = $0
+                  }
+                }
+                END {
+                  if (n > 0) print pick
+                }
+              ' \
+            | sed -E '
+                s/^[“”"'\''‘’]+//;
+                s/[“”"'\''‘’]+$//;
+                s/[‘’]/'\''/g;
+                s/[“”]/"/g;
+                s/—/--/g;
+                s/–/-/g;
+                s/…/.../g
+              '
+          )"
+
+          echo "[DEBUG] Selected lyric:"
+          echo "${LYRIC:-<empty>}"
 
           printf 'lyric=%s\n' "${LYRIC}" >> "${GITHUB_OUTPUT}"
 
@@ -107,18 +142,13 @@ jobs:
               "${LYRIC}" "${TRACK}" "${ARTIST}" \
               > _includes/now-playing.txt
           else
+            echo "[WARN] No lyric; writing fallback"
             printf '🎵 %s\n    — %s\n' \
               "${TRACK}" "${ARTIST}" \
               > _includes/now-playing.txt
           fi
 
-      - name: Commit and push
+      - name: Show final file
         run: |
-          set -euo pipefail
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add _includes/now-playing.txt
-          git diff --staged --quiet || git commit -m "Update now playing"
-          git push
+          echo "[DEBUG] _includes/now-playing.txt"
+          cat _includes/now-playing.txt
