@@ -2,7 +2,7 @@ name: Update Now Playing
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get access token
+      - name: Get Spotify access token
         id: token
         run: |
           RESPONSE=$(curl -s -X POST "https://accounts.spotify.com/api/token" \
@@ -41,10 +41,56 @@ jobs:
           echo "track=$TRACK" >> $GITHUB_OUTPUT
           echo "artist=$ARTIST" >> $GITHUB_OUTPUT
 
+      - name: Fetch lyrics from Genius
+        id: lyrics
+        run: |
+          TRACK="${{ steps.recent.outputs.track }}"
+          ARTIST="${{ steps.recent.outputs.artist }}"
+
+          # Search Genius for the song
+          SEARCH=$(curl -s -G "https://api.genius.com/search" \
+            --data-urlencode "q=$TRACK $ARTIST" \
+            -H "Authorization: Bearer ${{ secrets.GENIUS_API_TOKEN }}")
+
+          SONG_PATH=$(echo "$SEARCH" | jq -r '.response.hits[0].result.path // empty')
+
+          if [ -z "$SONG_PATH" ]; then
+            echo "lyric=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Scrape lyrics from Genius page
+          PAGE=$(curl -s "https://genius.com$SONG_PATH")
+
+          # Extract lyrics - Genius puts them in data-lyrics-container divs
+          LYRICS=$(echo "$PAGE" | grep -oP '(?<=<div data-lyrics-container="true"[^>]*>).*?(?=</div>)' | \
+            sed 's/<br\/>/\n/g' | sed 's/<[^>]*>//g' | \
+            sed 's/&#x27;/'"'"'/g' | sed 's/&amp;/\&/g' | \
+            grep -v '^\[' | grep -v '^$' | head -50)
+
+          if [ -z "$LYRICS" ]; then
+            echo "lyric=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Pick a random line
+          RANDOM_LINE=$(echo "$LYRICS" | shuf -n 1 | xargs)
+
+          echo "lyric=$RANDOM_LINE" >> $GITHUB_OUTPUT
+
       - name: Update now-playing.txt
         run: |
-          echo "\"${{ steps.recent.outputs.track }}\"" > _includes/now-playing.txt
-          echo "    — ${{ steps.recent.outputs.artist }}, via Spotify" >> _includes/now-playing.txt
+          TRACK="${{ steps.recent.outputs.track }}"
+          ARTIST="${{ steps.recent.outputs.artist }}"
+          LYRIC="${{ steps.lyrics.outputs.lyric }}"
+
+          if [ -n "$LYRIC" ]; then
+            echo "\"$LYRIC\"" > _includes/now-playing.txt
+            echo "    — $ARTIST, \"$TRACK\" (via Spotify)" >> _includes/now-playing.txt
+          else
+            echo "\"$TRACK\"" > _includes/now-playing.txt
+            echo "    — $ARTIST, via Spotify" >> _includes/now-playing.txt
+          fi
 
       - name: Commit and push
         run: |
