@@ -41,31 +41,25 @@ jobs:
           echo "track=$TRACK" >> $GITHUB_OUTPUT
           echo "artist=$ARTIST" >> $GITHUB_OUTPUT
 
-      - name: Install lyricsgenius
-        run: pip install lyricsgenius
-
-      - name: Fetch lyrics from Genius
+      - name: Fetch lyrics from LrcLib
         id: lyrics
-        env:
-          GENIUS_ACCESS_TOKEN: ${{ secrets.GENIUS_API_TOKEN }}
         run: |
           TRACK="${{ steps.recent.outputs.track }}"
           ARTIST="${{ steps.recent.outputs.artist }}"
 
-          LYRIC=$(python3 << PYEOF
-          import os
+          LYRIC=$(curl -s -G "https://lrclib.net/api/search" \
+            --data-urlencode "track_name=$TRACK" \
+            --data-urlencode "artist_name=$ARTIST" | \
+            python3 << 'PYEOF'
+          import sys
+          import json
           import random
-          import lyricsgenius
 
-          genius = lyricsgenius.Genius(verbose=False, remove_section_headers=True)
-          song = genius.search_song("$TRACK", "$ARTIST")
-
-          if song and song.lyrics:
-              lines = [l.strip() for l in song.lyrics.split('\n')
-                       if l.strip() and len(l.strip()) >= 20
-                       and not l.strip().startswith('[')
-                       and 'Embed' not in l
-                       and 'Lyrics' not in l]
+          data = json.load(sys.stdin)
+          if data and len(data) > 0 and data[0].get('plainLyrics'):
+              lyrics = data[0]['plainLyrics']
+              lines = [l.strip() for l in lyrics.split('\n')
+                       if l.strip() and len(l.strip()) >= 20]
               if lines:
                   print(random.choice(lines))
           PYEOF
