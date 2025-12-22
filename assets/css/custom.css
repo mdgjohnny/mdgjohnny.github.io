@@ -18,6 +18,13 @@ a:visited {
 /* Phosphor glow on ASCII art */
 pre, code {
   text-shadow: 0 0 8px rgba(51, 255, 51, 0.4);
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Prevent body horizontal scroll */
+body {
+  overflow-x: hidden;
 }
 
 /* Scanlines overlay */
