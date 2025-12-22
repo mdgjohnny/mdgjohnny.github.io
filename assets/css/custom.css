@@ -25,15 +25,9 @@ pre, code {
 /* Scale ASCII header on mobile */
 @media (max-width: 768px) {
   pre {
-    font-size: 0.35em;
+    font-size: clamp(0.15em, 1.5vw, 0.5em);
     line-height: 1.1;
-  }
-}
-
-@media (max-width: 480px) {
-  pre {
-    font-size: 0.25em;
-    line-height: 1.0;
+    overflow-x: hidden;
   }
 }
 
