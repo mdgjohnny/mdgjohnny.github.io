@@ -1,4 +1,10 @@
 title: Disjecta Membra
 url: "https://mdgjohnny.github.io"
 
+remote_theme: b2a3e8/jekyll-theme-console
+style: dark
+
+plugins:
+  - jekyll-remote-theme
+
 markdown: kramdown
