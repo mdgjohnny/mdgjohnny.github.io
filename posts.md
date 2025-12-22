@@ -1,5 +1,7 @@
 ---
 layout: home
 title: Posts
-permalink: /posts/
+permalink: /writing/
 ---
+
+# Posts

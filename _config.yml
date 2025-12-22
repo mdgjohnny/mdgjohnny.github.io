@@ -5,6 +5,7 @@ remote_theme: b2a3e8/jekyll-theme-console
 style: dark
 
 header_pages:
+  - index.md
   - about.md
   - posts.md
 
