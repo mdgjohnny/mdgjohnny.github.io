@@ -1,2 +1,2 @@
-You will be attacked by a beast who has the body of a wolf, the tail of
-a lion, and the face of Donald Duck.
+He that breaks a thing to find out what it is has left the path of wisdom.
+		-- J.R.R. Tolkien
