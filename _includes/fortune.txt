@@ -1,2 +1,2 @@
-Go not to the elves for counsel, for they will say both yes and no.
-		-- J.R.R. Tolkien
+I fell asleep reading a dull book, and I dreamt that I was reading on,
+so I woke up from sheer boredom.
