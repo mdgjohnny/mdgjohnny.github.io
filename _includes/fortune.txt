@@ -1,1 +1,2 @@
-Don't kiss an elephant on the lips today.
+Q:	What is the difference between Texas and yogurt?
+A:	Yogurt has culture.
