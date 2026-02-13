@@ -1,2 +1,1 @@
-Alas, how love can trifle with itself!
-		-- William Shakespeare, "The Two Gentlemen of Verona"
+Keep emotionally active.  Cater to your favorite neurosis.
