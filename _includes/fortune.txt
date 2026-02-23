@@ -1,1 +1,1 @@
-Your lover will never wish to leave you.
+Are you making all this up as you go along?
