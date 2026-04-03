@@ -132,3 +132,60 @@ body::before {
   font-style: normal;
   margin-bottom: 0.5em;
 }
+
+/* Bigger font size */
+body {
+  font-size: 1.25rem;
+}
+
+@media (min-width: 769px) {
+  body {
+    font-size: 1.45rem;
+  }
+}
+
+/* Tables - cleaner look, no borders */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.5em 0;
+}
+
+table th,
+table td {
+  border: none;
+  padding: 0.5em 1em;
+  text-align: left;
+}
+
+table th {
+  color: #33ff33;
+  border-bottom: 1px solid #33ff33;
+}
+
+table tr:nth-child(even) {
+  background: rgba(51, 255, 51, 0.05);
+}
+
+/* Blockquotes - better contrast */
+blockquote {
+  border-left: 3px solid #33ff33;
+  margin: 1.5em 0;
+  padding: 0.5em 1em;
+  color: #cccccc;
+  background: rgba(51, 255, 51, 0.05);
+}
+
+/* Inline code - better contrast */
+code:not(pre code) {
+  background: rgba(51, 255, 51, 0.15);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  color: #33ff33;
+}
+
+/* Link hover - cyan but not blinding white */
+a:hover {
+  color: #00cccc;
+  text-shadow: 0 0 8px rgba(0, 204, 204, 0.6);
+}
