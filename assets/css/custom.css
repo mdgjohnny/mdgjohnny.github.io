@@ -133,10 +133,18 @@ body::before {
   margin-bottom: 0.5em;
 }
 
-/* Bigger font size */
+/* Typography */
 body {
   font-size: 1.1rem;
   line-height: 1.7;
+  text-align: justify;
+}
+
+/* Wider content area */
+.wrapper, .container, main, .page-content {
+  max-width: 50rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
 }
 
 @media (min-width: 769px) {
