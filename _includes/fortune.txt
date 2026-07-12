@@ -1,2 +1,3 @@
-Q:	What is green and lives in the ocean?
-A:	Moby Pickle.
+If more of us valued food and cheer and song above hoarded gold, it would
+be a merrier world.
+		-- J.R.R. Tolkien
