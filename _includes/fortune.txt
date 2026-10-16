@@ -1,1 +1,1 @@
-Today is National Existential Ennui Awareness Day.
+You will be awarded the Nobel Peace Prize... posthumously.
